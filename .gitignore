@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# forgeapikey token file
+forgeapikey/token
+
 # C extensions
 *.so
 
