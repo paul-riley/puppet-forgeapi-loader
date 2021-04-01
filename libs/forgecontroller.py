@@ -13,7 +13,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 file_dir = os.path.dirname(__file__)
 sys.path.append(file_dir)
 
-class Modulecontroller:
+class Forgecontroller:
 
     def __init__(self):
         self.group_obj_list = []
