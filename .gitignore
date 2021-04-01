@@ -6,6 +6,9 @@ __pycache__/
 # forgeapikey token file
 forgeapikey/token
 
+# Puppetfile
+Puppetfile
+
 # C extensions
 *.so
 

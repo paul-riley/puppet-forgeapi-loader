@@ -15,8 +15,10 @@ class Forgecontroller:
 
     def __init__(self):
         self.headers = {}
+        self.module_list = ["forge 'https://forge.puppet.com'"]
         self.__connection = None
         self.__token = None
+
 
     #returns dictionary {}
     def set_connection(self, connection = None, token = None):
@@ -31,6 +33,7 @@ class Forgecontroller:
                 token = fh.readline().strip()
             except IOError:
                 token = 'Error Reading Token!'
+                print('Error Reading Token')
             else:
                 fh.close()
                 os.chdir(current_dir)
@@ -50,13 +53,12 @@ class Forgecontroller:
 
     #loads data in to node_obj_list
     def get_modules(self, number) :
-        uri = '/v3/releases?hide_deprecated=true&limit=100'
+        uri = '/v3/modules?hide_deprecated=true&limit=100'
         #print('connection: ' + self.__connection + uri)
         #print('token:' + self.__token )
         resp = requests.get(self.__connection + uri, verify=False, headers=self.headers)
 
         paginate_list = []
-        module_list = ["forge 'https://forge.puppet.com'"]
 
         if resp.status_code == 200 :
             # This worked the first time. Let's paginate and get data.
@@ -67,7 +69,7 @@ class Forgecontroller:
                 offset = i*100
                 if offset > 0 :
                     #ignore the first offset. We already have that data.
-                    paginate_list.append('/v3/releases?hide_deprecated=true&limit=100&offset=' + str(offset))
+                    paginate_list.append('/v3/modules?hide_deprecated=true&limit=100&offset=' + str(offset))
 
 
                 # This turns the json automatically into a model without having to do that heavy lifting :)
@@ -75,17 +77,28 @@ class Forgecontroller:
                 # This does not encode the json into strings correctly. Which is crap.
                 # because the method is called .json() why not call it .to_dictionary()?
                 # if you need to turn it in parseable json: json.loads(data.json()) :(
-                first_ref = json.loads(json.dumps(resp.json()),object_hook=lambda d: SimpleNamespace(**d))
+            first_ref = json.loads(json.dumps(resp.json()),object_hook=lambda d: SimpleNamespace(**d))
 
-                #first time through. let's save some rest calls
-                for single_mod in first_ref.results :
-                    module_list.append("mod '" + single_mod.module.slug + "','" + single_mod.version + "'")
+            #first time through. let's save some rest calls
+            for single_mod in first_ref.results :
+                self.module_list.append("mod '" + single_mod.slug + "',    '" + single_mod.current_release.version + "'")
 
             for next_uri in paginate_list:
                 next_resp = requests.get(self.__connection + next_uri, verify=False, headers=self.headers)
                 if next_resp.status_code == 200 :
-                    next_ref = json.loads(json.dumps(resp.json()),object_hook=lambda d: SimpleNamespace(**d))
+                    next_ref = json.loads(json.dumps(next_resp.json()),object_hook=lambda d: SimpleNamespace(**d))
                     for single_mod in next_ref.results :
-                        module_list.append("mod '" + single_mod.module.slug + "',    '" + single_mod.version + "'")
+                        self.module_list.append("mod '" + single_mod.slug + "',    '" + single_mod.current_release.version + "'")
 
-        return module_list
+        return self.module_list
+
+    #I should code a view, but I just want to get this done.
+    def write_puppetfile(self):
+        try:
+            fh = open(os.path.abspath('Puppetfile'), "w")
+            for item in self.module_list:
+                fh.write(item + "\n")
+        except IOError:
+            print('Unable to Write to Puppetfile')
+        else:
+            fh.close()
